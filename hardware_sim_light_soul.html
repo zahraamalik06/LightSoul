@@ -1,0 +1,1403 @@
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  #wrap{position:relative;width:100%;background:#000;font-family:monospace;user-select:none;}
+  canvas{display:block;width:100%;}
+  #ui{position:absolute;bottom:0;left:0;right:0;padding:12px 14px;background:linear-gradient(transparent,rgba(0,1,4,0.97));display:flex;flex-direction:column;gap:10px;}
+  #controls{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+
+  .straight-wrap{display:flex;flex-direction:column;gap:4px;flex:1.2;min-width:80px;}
+  .straight-wrap label{font-size:10px;color:rgba(160,200,255,0.35);letter-spacing:0.08em;transition:color 0.5s;}
+  .straight-track{position:relative;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;cursor:pointer;}
+  .straight-fill{height:100%;background:rgba(140,190,255,0.5);border-radius:3px;transition:width 0.05s;}
+  .straight-thumb{position:absolute;top:50%;width:14px;height:14px;background:#8bc4ff;border-radius:50%;transform:translate(-50%,-50%);cursor:grab;box-shadow:0 0 6px rgba(140,190,255,0.6);}
+
+  .zigzag-wrap{display:flex;flex-direction:column;gap:4px;flex:1;min-width:70px;}
+  .zigzag-wrap label{font-size:10px;color:rgba(160,200,255,0.35);letter-spacing:0.08em;transition:color 0.5s;}
+  .zigzag-svg-wrap{height:32px;cursor:pointer;position:relative;}
+  .zigzag-svg-wrap svg{width:100%;height:100%;}
+
+  .magnets-wrap{display:flex;flex-direction:column;gap:4px;flex:1.4;min-width:90px;}
+  .magnets-wrap label{font-size:10px;color:rgba(160,200,255,0.35);letter-spacing:0.08em;transition:color 0.5s;}
+  .magnets-grid{display:flex;gap:5px;flex-wrap:wrap;}
+  .magnet{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+  .magnet.on{background:rgba(140,190,255,0.25);border-color:rgba(140,190,255,0.7);box-shadow:0 0 8px rgba(140,190,255,0.4);}
+  .magnet-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);}
+  .magnet.on .magnet-dot{background:rgba(140,190,255,0.9);}
+
+  .joystick-wrap{display:flex;flex-direction:column;gap:4px;align-items:center;flex:0.9;min-width:65px;}
+  .joystick-wrap label{font-size:10px;color:rgba(160,200,255,0.35);letter-spacing:0.08em;align-self:flex-start;transition:color 0.5s;}
+  .joystick-area{position:relative;width:56px;height:56px;background:rgba(255,255,255,0.04);border-radius:50%;border:1px solid rgba(255,255,255,0.1);cursor:crosshair;touch-action:none;}
+  .joystick-stick{position:absolute;width:18px;height:18px;background:#8bc4ff;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 8px rgba(140,190,255,0.5);}
+  .joystick-cross{position:absolute;inset:0;pointer-events:none;}
+
+  .rotator-wrap{display:flex;flex-direction:column;gap:4px;align-items:center;flex:0.9;min-width:60px;}
+  .rotator-wrap label{font-size:10px;color:rgba(160,200,255,0.35);letter-spacing:0.08em;align-self:flex-start;transition:color 0.5s;}
+  .rotator-ring{position:relative;width:54px;height:54px;cursor:grab;touch-action:none;}
+  .rotator-ring canvas{width:100%;height:100%;}
+
+  #bottom-bar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+  .mode-btn{padding:5px 12px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.28);font-size:11px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;transition:all 0.3s;}
+  .mode-btn.active{border-color:rgba(140,190,255,0.6);color:rgba(170,215,255,0.9);background:rgba(100,160,255,0.06);}
+  #commit-btn{padding:6px 18px;border:1px solid rgba(200,220,255,0.2);background:transparent;color:rgba(200,220,255,0.5);font-size:11px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;transition:all 0.3s;min-width:100px;}
+  #commit-btn.playing{border-color:rgba(180,210,255,0.7);color:rgba(210,230,255,0.95);background:rgba(100,150,255,0.07);}
+  #stop-btn{padding:6px 14px;border:1px solid rgba(255,100,100,0.2);background:transparent;color:rgba(255,130,130,0.35);font-size:11px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;transition:all 0.3s;display:none;}
+  #stop-btn.visible{display:block;border-color:rgba(255,100,100,0.5);color:rgba(255,150,150,0.75);}
+  #stop-btn:hover{background:rgba(255,80,80,0.07);}
+  #song-dna{font-size:10px;color:rgba(150,190,255,0.4);letter-spacing:0.05em;}
+  #mode-label{font-size:10px;letter-spacing:0.1em;transition:color 0.5s;color:rgba(150,200,255,0.45);}
+  #status{font-size:10px;color:rgba(255,255,255,0.15);}
+  #wall-btn{padding:5px 12px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.28);font-size:11px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;transition:all 0.4s;}
+  #wall-btn.light{border-color:rgba(30,30,30,0.3);color:rgba(20,20,20,0.55);background:rgba(220,220,220,0.12);}
+  body.light-wall #wrap{background:#f5f4f0;}
+  body.light-wall #ui{background:linear-gradient(transparent,rgba(240,238,232,0.97));}
+  body.light-wall .straight-wrap label,body.light-wall .zigzag-wrap label,body.light-wall .magnets-wrap label,body.light-wall .joystick-wrap label,body.light-wall .rotator-wrap label{color:rgba(40,40,60,0.45);}
+  body.light-wall .straight-track{background:rgba(0,0,0,0.08);}
+  body.light-wall .straight-fill{background:rgba(40,80,160,0.4);}
+  body.light-wall .straight-thumb{background:#4466bb;box-shadow:0 0 6px rgba(40,80,180,0.4);}
+  body.light-wall .magnet{background:rgba(0,0,0,0.04);border-color:rgba(0,0,0,0.12);}
+  body.light-wall .magnet.on{background:rgba(40,80,180,0.15);border-color:rgba(40,80,200,0.6);box-shadow:0 0 8px rgba(40,80,200,0.2);}
+  body.light-wall .magnet-dot{background:rgba(0,0,0,0.15);}
+  body.light-wall .magnet.on .magnet-dot{background:rgba(40,80,200,0.8);}
+  body.light-wall .joystick-area{background:rgba(0,0,0,0.03);border-color:rgba(0,0,0,0.1);}
+  body.light-wall .joystick-stick{background:#4466bb;box-shadow:0 0 8px rgba(40,80,200,0.3);}
+  body.light-wall .mode-btn{color:rgba(0,0,0,0.3);border-color:rgba(0,0,0,0.1);}
+  body.light-wall .mode-btn.active{border-color:rgba(40,80,200,0.5);color:rgba(20,50,160,0.8);background:rgba(40,80,200,0.06);}
+  body.light-wall #commit-btn{border-color:rgba(0,0,0,0.15);color:rgba(20,20,60,0.45);}
+  body.light-wall #commit-btn.playing{border-color:rgba(40,80,200,0.6);color:rgba(20,50,160,0.9);background:rgba(40,80,200,0.06);}
+  body.light-wall #stop-btn{border-color:rgba(180,40,40,0.2);color:rgba(160,30,30,0.4);}
+  body.light-wall #stop-btn.visible{border-color:rgba(180,40,40,0.5);color:rgba(160,30,30,0.7);}
+  body.light-wall #song-dna{color:rgba(30,50,120,0.45);}
+  body.light-wall #mode-label{color:rgba(30,50,120,0.4);}
+  body.light-wall #status{color:rgba(0,0,0,0.2);}
+  body.light-wall #log-btn{color:rgba(30,50,150,0.35)!important;border-color:rgba(30,50,150,0.15)!important;}
+
+  /* ── HARDWARE BRIDGE ─────────────────────────────────────────────────────── */
+  #hw-panel{position:absolute;top:10px;right:10px;z-index:20;display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  #hw-connect-row{display:flex;gap:5px;align-items:center;}
+  #hw-ip{background:rgba(0,0,0,0.5);border:1px solid rgba(140,190,255,0.18);color:rgba(180,220,255,0.75);font-family:monospace;font-size:10px;letter-spacing:0.08em;padding:4px 8px;border-radius:3px;width:140px;outline:none;}
+  #hw-ip:focus{border-color:rgba(140,190,255,0.5);}
+  #hw-ip::placeholder{color:rgba(140,190,255,0.2);}
+  #hw-btn{padding:4px 10px;border:1px solid rgba(140,190,255,0.2);background:transparent;color:rgba(140,190,255,0.4);font-size:10px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;font-family:monospace;transition:all 0.3s;white-space:nowrap;}
+  #hw-btn:hover{border-color:rgba(140,190,255,0.5);color:rgba(180,220,255,0.8);}
+  #hw-btn.connected{border-color:rgba(100,220,150,0.5);color:rgba(120,220,160,0.75);}
+  #hw-btn.error{border-color:rgba(255,100,100,0.4);color:rgba(255,130,130,0.6);}
+  #hw-status{font-size:9px;letter-spacing:0.1em;color:rgba(140,190,255,0.25);text-align:right;}
+  #hw-signal{display:flex;gap:2px;align-items:flex-end;height:12px;opacity:0;transition:opacity 0.4s;}
+  #hw-signal.active{opacity:1;}
+  #hw-signal span{width:3px;background:rgba(100,220,150,0.6);border-radius:1px;transition:height 0.1s;}
+  #hw-raw{font-size:9px;color:rgba(140,190,255,0.2);letter-spacing:0.06em;font-family:monospace;}
+  body.light-wall #hw-ip{background:rgba(240,240,240,0.7);border-color:rgba(0,0,100,0.2);color:rgba(10,20,80,0.7);}
+  body.light-wall #hw-ip::placeholder{color:rgba(0,0,100,0.25);}
+  body.light-wall #hw-btn{border-color:rgba(0,0,100,0.18);color:rgba(10,20,100,0.45);}
+  body.light-wall #hw-status{color:rgba(10,20,100,0.3);}
+  body.light-wall #hw-raw{color:rgba(10,20,100,0.3);}
+</style>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <!-- ── SESSION LOG OVERLAY ──────────────────────────────────────────────── -->
+  <div id="log-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,1,5,0.97);z-index:50;overflow-y:auto;padding:28px 20px;font-family:monospace;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;border-bottom:1px solid rgba(140,190,255,0.1);padding-bottom:14px;">
+      <span style="font-size:12px;letter-spacing:0.18em;color:rgba(180,215,255,0.5);">LIGHT SOUL_SESSION LOG</span>
+      <button onclick="closeSessionLog()" style="font-size:11px;color:rgba(140,190,255,0.4);background:transparent;border:1px solid rgba(140,190,255,0.15);padding:4px 12px;border-radius:3px;cursor:pointer;font-family:monospace;letter-spacing:0.1em;">back</button>
+    </div>
+    <div id="log-empty" style="display:none;text-align:center;margin-top:60px;font-size:11px;letter-spacing:0.12em;color:rgba(140,190,255,0.2);line-height:2.4;">no sessions committed yet<br>go sculpt the light — then commit</div>
+    <div id="log-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <button id="log-clear-btn" onclick="clearSessions()" style="display:none;margin:24px auto 0;display:block;font-size:10px;letter-spacing:0.1em;color:rgba(255,100,100,0.3);background:transparent;border:1px solid rgba(255,100,100,0.12);padding:5px 16px;border-radius:3px;cursor:pointer;font-family:monospace;">clear all sessions</button>
+  </div>
+
+  <div id="hw-debug" style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.7);color:#0f0;font-family:monospace;font-size:11px;padding:6px 10px;border-radius:4px;z-index:999;pointer-events:none;line-height:1.8;display:none;">
+    <div>SL: <span id="dbg-sl">—</span></div>
+    <div>JX: <span id="dbg-jx">—</span> &nbsp; JY: <span id="dbg-jy">—</span></div>
+    <div>ROT: <span id="dbg-rot">—</span></div>
+    <div>ZIG: <span id="dbg-zig">—</span> &nbsp; SNAP: <span id="dbg-snap">—</span></div>
+  </div>
+
+  <!-- ── HARDWARE BRIDGE PANEL ──────────────────────────────────────────── -->
+  <div id="hw-panel">
+    <div id="hw-connect-row">
+      <input id="hw-ip" type="text" placeholder="192.168.x.x" spellcheck="false" autocomplete="off"/>
+      <button id="hw-btn">CONNECT</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;">
+      <div id="hw-raw"></div>
+      <div id="hw-signal">
+        <span style="height:3px"></span>
+        <span style="height:6px"></span>
+        <span style="height:9px"></span>
+        <span style="height:5px"></span>
+      </div>
+    </div>
+    <div id="hw-status">not connected · software mode</div>
+  </div>
+  <div id="ui">
+    <div id="controls">
+      <div class="straight-wrap">
+        <label id="lbl-wave">WAVE HEIGHT</label>
+        <div class="straight-track" id="str-track">
+          <div class="straight-fill" id="str-fill" style="width:55%"></div>
+          <div class="straight-thumb" id="str-thumb" style="left:55%"></div>
+        </div>
+      </div>
+      <div class="zigzag-wrap">
+        <label id="lbl-density">DENSITY</label>
+        <div class="zigzag-svg-wrap" id="zig-wrap"></div>
+      </div>
+      <div class="magnets-wrap">
+        <label id="lbl-layers">LAYERS</label>
+        <div class="magnets-grid" id="magnets"></div>
+      </div>
+      <div class="joystick-wrap">
+        <label id="lbl-joy">SPREAD / SPEED</label>
+        <div class="joystick-area" id="joy-area">
+          <svg class="joystick-cross" viewBox="0 0 56 56">
+            <line x1="28" y1="4" x2="28" y2="52" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+            <line x1="4" y1="28" x2="52" y2="28" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+            <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+            <circle cx="28" cy="28" r="12" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+          </svg>
+          <div class="joystick-stick" id="joy-stick" style="left:50%;top:50%;"></div>
+        </div>
+      </div>
+      <div class="rotator-wrap">
+        <label id="lbl-glow">GLOW</label>
+        <div class="rotator-ring" id="rot-ring">
+          <canvas id="rot-canvas" width="54" height="54"></canvas>
+        </div>
+      </div>
+    </div>
+    <div id="bottom-bar">
+      <div style="display:flex;gap:7px;align-items:center;">
+        <button class="mode-btn active" id="m1">SHAPE</button>
+        <button class="mode-btn" id="m2">FEEL</button>
+        <button id="commit-btn">FEEL IT</button>
+        <button id="stop-btn">STOP</button>
+        <button id="wall-btn">LIGHT WALL</button>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div id="song-dna">sculpt the light — then commit</div>
+        <div id="mode-label">SHAPE</div>
+        <div id="status">idle</div>
+        <button id="log-btn" onclick="openSessionLog()" style="font-size:10px;color:rgba(140,190,255,0.3);background:transparent;border:1px solid rgba(140,190,255,0.12);padding:3px 10px;border-radius:3px;cursor:pointer;letter-spacing:0.1em;font-family:monospace;transition:all 0.3s;" onmouseover="this.style.color='rgba(180,220,255,0.7)';this.style.borderColor='rgba(140,190,255,0.35)';" onmouseout="this.style.color='rgba(140,190,255,0.3)';this.style.borderColor='rgba(140,190,255,0.12)';">LOG</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('wrap');
+let W,H,t=0,mode='shape',musicPlaying=false;
+let beatPulse=0,modeFlash=0;
+let allNodes=[],allLoops=[];
+let lightWall=false;
+
+// ── WALL MODE TOGGLE ─────────────────────────────────────────────────────────
+document.getElementById('wall-btn').addEventListener('click',()=>{
+  lightWall=!lightWall;
+  document.body.classList.toggle('light-wall',lightWall);
+  const btn=document.getElementById('wall-btn');
+  btn.classList.toggle('light',lightWall);
+  btn.textContent=lightWall?'DARK WALL':'LIGHT WALL';
+  window._redrawKnob();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TWO fully independent param sets — switching modes swaps all values.
+// SHAPE controls MOTION of the art + musical architecture.
+// FEEL controls VISUAL STYLE of the art (colour, size, bloom, trail).
+// Music always reads from SHAPE params so it tracks the motion sculpt.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const WAVE_MIN=0.35,WAVE_MAX=1.0;
+const modeParams={
+  shape:{waveH:0.55, density:0.625, spreadX:0.5, spreadY:0.5, glow:0.6, layer:0},
+  feel: {waveH:0.5,  density:0.5,   spreadX:0.5, spreadY:0.4, glow:0.5, layer:1}
+};
+let params=modeParams.shape; // always points to current mode's object
+
+const SHAPE_LABELS={wave:'WAVE HEIGHT', density:'HARMONICS',   layers:'FREQUENCY',   joy:'DRIFT / SPEED',      glow:'BRIGHTNESS'};
+const FEEL_LABELS= {wave:'DOT SIZE',    density:'CONNECTIONS', layers:'PALETTE',     joy:'SATURATION / TRAIL', glow:'BLOOM'};
+
+function waveSliderToParam(x){return WAVE_MIN+x*(WAVE_MAX-WAVE_MIN);}
+function waveParamToSlider(v){return (v-WAVE_MIN)/(WAVE_MAX-WAVE_MIN);}
+
+function updateLabels(){
+  const L=mode==='shape'?SHAPE_LABELS:FEEL_LABELS;
+  document.getElementById('lbl-wave').textContent=L.wave;
+  document.getElementById('lbl-density').textContent=L.density;
+  document.getElementById('lbl-layers').textContent=L.layers;
+  document.getElementById('lbl-joy').textContent=L.joy;
+  document.getElementById('lbl-glow').textContent=L.glow;
+  document.getElementById('mode-label').textContent=mode==='shape'?'SHAPE':'FEEL';
+  document.getElementById('mode-label').style.color=
+    mode==='shape'?'rgba(150,200,255,0.45)':'rgba(255,200,140,0.55)';
+}
+
+function syncControlsToParams(){
+  window._refreshWaveSlider();
+  window._refreshZigzag();
+  window._refreshMagnets();
+  window._refreshJoystick();
+  window._setRotAngle(params.glow);
+  window._rebuildZigzag();
+  window._redrawKnob();
+}
+
+// ── STRAIGHT SLIDER ──────────────────────────────────────────────────────────
+(()=>{
+  const track=document.getElementById('str-track');
+  const thumb=document.getElementById('str-thumb');
+  const fill=document.getElementById('str-fill');
+  let dragging=false;
+  function setFromRaw(x){
+    const c=Math.max(0,Math.min(1,x));
+    params.waveH=waveSliderToParam(c);
+    thumb.style.left=(c*100)+'%';fill.style.width=(c*100)+'%';
+  }
+  function setVal(e){
+    const r=track.getBoundingClientRect();
+    setFromRaw(((e.clientX||e.touches?.[0]?.clientX||0)-r.left)/r.width);
+  }
+  track.addEventListener('mousedown',e=>{dragging=true;setVal(e);});
+  window.addEventListener('mousemove',e=>{if(dragging)setVal(e);});
+  window.addEventListener('mouseup',()=>dragging=false);
+  track.addEventListener('touchstart',e=>{dragging=true;setVal(e);},{passive:true});
+  window.addEventListener('touchmove',e=>{if(dragging)setVal(e);},{passive:true});
+  window.addEventListener('touchend',()=>dragging=false);
+  window._refreshWaveSlider=()=>{
+    const s=waveParamToSlider(params.waveH);
+    thumb.style.left=(s*100)+'%';fill.style.width=(s*100)+'%';
+  };
+  window._refreshWaveSlider();
+})();
+
+// ── ZIGZAG SLIDER ─────────────────────────────────────────────────────────────
+(()=>{
+  const container=document.getElementById('zig-wrap');
+  const STEPS=8;
+  let current=5;
+  function buildZigzag(){
+    container.innerHTML='';
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('viewBox','0 0 100 32');svg.setAttribute('preserveAspectRatio','none');
+    const sw=100/STEPS;
+    const pts=[{x:0,y:16}];
+    for(let i=0;i<STEPS;i++){pts.push({x:(i+0.5)*sw,y:i%2===0?3:29});pts.push({x:(i+1)*sw,y:16});}
+    const full=document.createElementNS(ns,'path');
+    full.setAttribute('d','M'+pts.map(p=>`${p.x},${p.y}`).join('L'));
+    full.setAttribute('fill','none');full.setAttribute('stroke','rgba(255,255,255,0.1)');
+    full.setAttribute('stroke-width','1.5');full.setAttribute('stroke-linejoin','miter');
+    svg.appendChild(full);
+    const actPts=[pts[0]];
+    for(let i=0;i<current;i++){actPts.push(pts[i*2+1]);actPts.push(pts[i*2+2]);}
+    const act=document.createElementNS(ns,'path');
+    act.setAttribute('d','M'+actPts.map(p=>`${p.x},${p.y}`).join('L'));
+    act.setAttribute('fill','none');
+    act.setAttribute('stroke',mode==='feel'?'rgba(255,200,120,0.8)':'rgba(140,190,255,0.75)');
+    act.setAttribute('stroke-width','1.8');act.setAttribute('stroke-linejoin','miter');
+    svg.appendChild(act);
+    for(let i=0;i<current;i++){
+      const p=pts[i*2+1];
+      const dot=document.createElementNS(ns,'circle');
+      dot.setAttribute('cx',p.x);dot.setAttribute('cy',p.y);dot.setAttribute('r','2');
+      dot.setAttribute('fill',mode==='feel'?'rgba(255,210,140,0.9)':'rgba(140,190,255,0.9)');
+      svg.appendChild(dot);
+    }
+    for(let i=0;i<STEPS;i++){
+      const hit=document.createElementNS(ns,'rect');
+      hit.setAttribute('x',i*sw);hit.setAttribute('y',0);hit.setAttribute('width',sw);hit.setAttribute('height',32);
+      hit.setAttribute('fill','transparent');
+      hit.addEventListener('click',()=>{current=i+1;params.density=current/STEPS;buildZigzag();});
+      svg.appendChild(hit);
+    }
+    container.appendChild(svg);
+    params.density=current/STEPS;
+  }
+  buildZigzag();
+  window._refreshZigzag=()=>{current=Math.max(1,Math.round(params.density*STEPS));buildZigzag();};
+  window._rebuildZigzag=buildZigzag;
+})();
+
+// ── MAGNETS (radio) ───────────────────────────────────────────────────────────
+(()=>{
+  const container=document.getElementById('magnets');
+  const magnets=[];
+  for(let i=0;i<6;i++){
+    const m=document.createElement('div');
+    m.className='magnet'+(i===0?' on':'');
+    m.innerHTML='<div class="magnet-dot"></div>';
+    m.addEventListener('click',()=>{
+      params.layer=i;
+      magnets.forEach((el,j)=>el.classList.toggle('on',j===i));
+      m.style.transform='scale(1.3)';setTimeout(()=>m.style.transform='',120);
+    });
+    container.appendChild(m);magnets.push(m);
+  }
+  params.layer=0;
+  window._refreshMagnets=()=>magnets.forEach((el,j)=>el.classList.toggle('on',j===params.layer));
+})();
+
+// ── JOYSTICK (locks on release) ───────────────────────────────────────────────
+(()=>{
+  const area=document.getElementById('joy-area');
+  const stick=document.getElementById('joy-stick');
+  let active=false;const R=20;
+  function setJoy(cx,cy){
+    const r=area.getBoundingClientRect();
+    const ox=(cx-r.left)-r.width/2,oy=(cy-r.top)-r.height/2;
+    const d=Math.sqrt(ox*ox+oy*oy),cl=Math.min(d,R),a=Math.atan2(oy,ox);
+    const nx=Math.cos(a)*cl,ny=Math.sin(a)*cl;
+    stick.style.left=(50+nx/r.width*200)+'%';stick.style.top=(50+ny/r.height*200)+'%';
+    params.spreadX=0.5+nx/(R*2);params.spreadY=0.5-ny/(R*2);
+  }
+  area.addEventListener('mousedown',e=>{active=true;setJoy(e.clientX,e.clientY);});
+  window.addEventListener('mousemove',e=>{if(active)setJoy(e.clientX,e.clientY);});
+  window.addEventListener('mouseup',()=>{active=false;});
+  area.addEventListener('touchstart',e=>{active=true;setJoy(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  window.addEventListener('touchmove',e=>{if(active)setJoy(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  window.addEventListener('touchend',()=>{active=false;});
+  window._refreshJoystick=()=>{
+    const nx=(params.spreadX-0.5)*R*2,ny=(0.5-params.spreadY)*R*2;
+    // Always use fixed 56px container — getBoundingClientRect unreliable when offscreen
+    stick.style.left=(50+(nx/56)*100).toFixed(2)+'%';
+    stick.style.top =(50+(ny/56)*100).toFixed(2)+'%';
+  };
+})();
+
+// ── ROTARY ENCODER ───────────────────────────────────────────────────────────
+(()=>{
+  const ring=document.getElementById('rot-ring');
+  const rc=document.getElementById('rot-canvas');
+  const rctx=rc.getContext('2d');
+  let rotAngle=0.6*Math.PI*2,dragging=false,lastY=0,lastX=0;
+  function drawKnob(){
+    rctx.clearRect(0,0,54,54);
+    rctx.beginPath();rctx.arc(27,27,24,0,Math.PI*2);
+    rctx.strokeStyle=lightWall?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.08)';rctx.lineWidth=1;rctx.stroke();
+    const col=mode==='feel'
+      ?(lightWall?'rgba(160,100,20,0.6)':'rgba(255,200,120,0.6)')
+      :(lightWall?'rgba(30,60,180,0.55)':'rgba(140,190,255,0.55)');
+    const dotCol=mode==='feel'
+      ?(lightWall?'rgba(140,80,10,0.9)':'rgba(255,215,140,0.9)')
+      :(lightWall?'rgba(20,50,180,0.9)':'rgba(140,190,255,0.9)');
+    rctx.beginPath();rctx.arc(27,27,24,-Math.PI/2,-Math.PI/2+rotAngle,false);
+    rctx.strokeStyle=col;rctx.lineWidth=3;rctx.stroke();
+    const nx=27+Math.cos(rotAngle-Math.PI/2)*20,ny=27+Math.sin(rotAngle-Math.PI/2)*20;
+    rctx.beginPath();rctx.arc(nx,ny,3,0,Math.PI*2);rctx.fillStyle=dotCol;rctx.fill();
+    rctx.beginPath();rctx.arc(27,27,8,0,Math.PI*2);
+    rctx.fillStyle=lightWall?'rgba(0,0,0,0.04)':'rgba(255,255,255,0.05)';rctx.fill();
+    rctx.strokeStyle=lightWall?'rgba(0,0,0,0.12)':'rgba(255,255,255,0.12)';rctx.lineWidth=0.5;rctx.stroke();
+  }
+  function updateGlow(){params.glow=((rotAngle%(Math.PI*2))/(Math.PI*2)+1)%1;drawKnob();}
+  ring.addEventListener('mousedown',e=>{dragging=true;lastY=e.clientY;lastX=e.clientX;});
+  window.addEventListener('mousemove',e=>{if(!dragging)return;rotAngle+=((lastY-e.clientY)+(e.clientX-lastX))*0.03;lastY=e.clientY;lastX=e.clientX;updateGlow();});
+  window.addEventListener('mouseup',()=>dragging=false);
+  ring.addEventListener('wheel',e=>{e.preventDefault();rotAngle-=e.deltaY*0.008;updateGlow();},{passive:false});
+  ring.addEventListener('touchstart',e=>{dragging=true;lastY=e.touches[0].clientY;lastX=e.touches[0].clientX;},{passive:true});
+  window.addEventListener('touchmove',e=>{if(!dragging)return;rotAngle+=((lastY-e.touches[0].clientY)+(e.touches[0].clientX-lastX))*0.03;lastY=e.touches[0].clientY;lastX=e.touches[0].clientX;updateGlow();},{passive:true});
+  window.addEventListener('touchend',()=>dragging=false);
+  window._setRotAngle=v=>{rotAngle=v*Math.PI*2;drawKnob();};
+  window._redrawKnob=drawKnob;
+  drawKnob();
+})();
+
+// ── MODE SWITCH — swaps full param set, syncs all controls ───────────────────
+document.getElementById('m1').addEventListener('click',()=>{
+  mode='shape'; params=modeParams.shape;
+  document.getElementById('m1').classList.add('active');
+  document.getElementById('m2').classList.remove('active');
+  modeFlash=0.6; updateLabels(); syncControlsToParams();
+});
+document.getElementById('m2').addEventListener('click',()=>{
+  mode='feel'; params=modeParams.feel;
+  document.getElementById('m2').classList.add('active');
+  document.getElementById('m1').classList.remove('active');
+  modeFlash=0.6; updateLabels(); syncControlsToParams();
+});
+
+// ── MUSIC ENGINE ──────────────────────────────────────────────────────────────
+// Every parameter has a WIDE, clearly audible range.
+// Same dreamy R&B/soul style — just much more reactive to the controls.
+//
+// waveH   → reverb decay: 1 s (bone dry) ↔ 14 s (cathedral wash)
+// density → rhythmic density: near-silent hats + no chords ↔ dense fills + stabby chords every beat
+// layer   → song selection (0-5 → 5 different keys/vibes) + pad octave stacking
+// spreadX → master filter: 80 Hz (dark/muffled) ↔ 5000 Hz (bright/airy)  ← huge sweep
+// spreadY → BPM: base bpm ± 28 bpm  ← clearly different tempos
+// glow    → vocal + pad volume: both nearly inaudible ↔ both loud and present
+
+const songLibrary=[
+  {bpm:66, key:'Dbm', vibe:'midnight velvet',      chords:['Dbm9','Abm7','Bmaj7','Gb7sus4'], bassNotes:['Db2','Ab1','B1','Gb1'],  padType:'dark',    beatFeel:'halfTime'},
+  {bpm:72, key:'Fm',  vibe:'saturn in retrograde', chords:['Fm9','Dbmaj7','Bbm7','C7sus4'],  bassNotes:['F2','Db2','Bb1','C2'],   padType:'warm',    beatFeel:'halfTime'},
+  {bpm:64, key:'Cm',  vibe:'golden wound',         chords:['Cm9','Abmaj7','Fm7','G7sus4'],   bassNotes:['C2','Ab1','F1','G1'],    padType:'shimmer', beatFeel:'swing'},
+  {bpm:80, key:'Bbm', vibe:'loose thread',         chords:['Bbm9','Gbmaj7','Ebm7','F7sus4'], bassNotes:['Bb1','Gb1','Eb2','F2'],  padType:'cold',    beatFeel:'trap'},
+  {bpm:70, key:'Ebm', vibe:'dusk on repeat',       chords:['Ebm9','Bmaj7','Abm7','Bb7sus4'], bassNotes:['Eb2','B1','Ab1','Bb1'],  padType:'warm',    beatFeel:'halfTime'},
+  {bpm:74, key:'Gm',  vibe:'soft frequency',       chords:['Gm9','Ebmaj7','Cm7','D7sus4'],   bassNotes:['G1','Eb2','C2','D2'],    padType:'shimmer', beatFeel:'swing'},
+];
+
+function getDNA(){
+  // Song selected by whichever mode is currently active.
+  // In SHAPE mode: snap/magnet controls frequency AND song.
+  // In FEEL  mode: snap/magnet controls palette AND song.
+  return songLibrary[params.layer % songLibrary.length];
+}
+
+function chordToNotes(name,oct){
+  const map={
+    'Dbm9':['Db','E','Ab'],'Abm7':['Ab','B','Eb'],'Bmaj7':['B','Eb','Gb'],'Gb7sus4':['Gb','B','Db'],
+    'Fm9':['F','Ab','C'],'Dbmaj7':['Db','F','Ab'],'Bbm7':['Bb','Db','F'],'C7sus4':['C','F','G'],
+    'Cm9':['C','Eb','G'],'Abmaj7':['Ab','C','Eb'],'Fm7':['F','Ab','C'],'G7sus4':['G','C','D'],
+    'Bbm9':['Bb','Db','F'],'Gbmaj7':['Gb','Bb','Db'],'Ebm7':['Eb','Gb','Bb'],'F7sus4':['F','Bb','C'],
+    'Ebm9':['Eb','Gb','Bb'],'Bb7sus4':['Bb','Eb','F'],
+    'Gm9':['G','Bb','D'],'Ebmaj7':['Eb','G','Bb'],'Cm7':['C','Eb','G'],'D7sus4':['D','G','A'],
+  };
+  return (map[name]||['C','Eb','G']).map(n=>n+oct);
+}
+
+function stopMusic(){
+  allLoops.forEach(l=>{try{l.stop();l.dispose();}catch(e){}});
+  Tone.Transport.stop();
+  allNodes.forEach(n=>{try{n.dispose();}catch(e){}});
+  allLoops=[];allNodes=[];musicPlaying=false;
+  document.getElementById('commit-btn').classList.remove('playing');
+  document.getElementById('commit-btn').textContent='FEEL IT';
+  document.getElementById('stop-btn').classList.remove('visible');
+  document.getElementById('status').textContent='idle';
+}
+
+async function startMusic(dna, sourceParams){
+  await Tone.start();
+  stopMusic();
+
+  // sourceParams lets the log play any session's params directly.
+  // When called normally (commit button), uses the current active mode's params.
+  const p = sourceParams || params;
+
+  // ── Each param has a wide, unmistakably audible effect ────────────────────
+  //
+  // waveH   → reverb decay + wet: 1s dry room ↔ 14s infinite cathedral wash
+  // density → rhythmic density: 0=kick+bass only, 1=hats every step + dense chord stabs
+  // layer   → song key/vibe (6 distinct songs, different key+bpm+chord colour)
+  // spreadX → master lowpass filter: 90Hz dark mud ↔ 6000Hz bright air  ← most audible
+  // spreadY → tempo: base bpm ±30bpm  ← clearly different groove speeds
+  // glow    → pad + vocal volume: both completely silent ↔ both dominant in mix
+
+  const reverbDecay  = 1   + p.waveH * 13;                       // 1 → 14 s
+  const reverbWet    = 0.1 + p.waveH * 0.8;                      // 0.1 → 0.9 (bone dry → total wash)
+  const filterHz     = 90  + p.spreadX * 5910;                   // 90 → 6000 Hz  ← huge tonal shift
+  const bpmFinal     = Math.max(46, Math.min(118, dna.bpm + (p.spreadY - 0.5) * 60)); // ±30 bpm
+  const hatProb      = p.density * p.density;                    // 0 → 1, squared (very sparse → every note)
+  const chordProb    = 0.04 + p.density * 0.92;                  // 0.04 → 0.96  ← near silence → every beat
+  const chordAttack  = 0.25 - p.density * 0.22;                  // 0.25 → 0.03 s (soft pad → hard stab)
+  const chordDecay   = 0.7  - p.density * 0.55;                  // 0.7 → 0.15 s
+  const padVol       = -38  + p.glow * 28;                       // -38 → -10 dB (totally silent → loud)
+  const vocalVol     = -40  + p.glow * 30;                       // -40 → -10 dB (inaudible → singing)
+  const padWet       = 0.25 + p.glow * 0.65;                     // 0.25 → 0.9
+  const bassDecay    = 0.25 + p.waveH * 1.2;                     // 0.25 → 1.45 s (tight → sustained)
+  const kickDecay    = 0.15 + p.waveH * 0.55;                    // 0.15 → 0.7 s  (snappy → boomy)
+
+  Tone.Transport.bpm.value = bpmFinal;
+
+  // ── Signal chain ──────────────────────────────────────────────────────────
+  const comp  = new Tone.Compressor(-14, 5).toDestination();
+  // Master filter — spreadX sweeps the entire frequency content of the mix
+  const mFilt = new Tone.Filter(filterHz, 'lowpass').connect(comp);
+  // Main reverb — waveH transforms the spatial size of everything
+  const mVerb = new Tone.Reverb({decay: reverbDecay, wet: reverbWet}).connect(mFilt);
+
+  // Kick — gets boomy/long at high waveH, tight at low
+  const kick = new Tone.MembraneSynth({
+    pitchDecay: 0.04 + p.waveH * 0.1,
+    octaves: 5 + Math.round(p.glow * 3),
+    envelope: {attack:0.001, decay: kickDecay, sustain:0, release:0.3},
+    volume: -5
+  }).connect(comp);
+
+  // Snare — crispy at low density, airy at high (more reverb tail)
+  const snare = new Tone.NoiseSynth({
+    noise: {type:'pink'},
+    envelope: {attack:0.003, decay: 0.05 + p.density * 0.14, sustain:0, release:0.06},
+    volume: -18
+  }).connect(mVerb);
+
+  // Hat — tone tracks spreadX (dark to bright), probability from density²
+  const hat = new Tone.MetalSynth({
+    frequency: 160 + p.spreadX * 500,
+    envelope: {attack:0.001, decay: 0.009 + p.density * 0.05, release:0.007},
+    harmonicity: 3.1, modulationIndex: 14, resonance: 2400, octaves: 0.7,
+    volume: -25
+  }).connect(mVerb);
+
+  // Bass — filter tracks spreadX, sustain tracks waveH
+  const bFilt = new Tone.Filter(100 + p.spreadX * 1400, 'lowpass').connect(mFilt);
+  const bass  = new Tone.Synth({
+    oscillator: {type:'triangle'},
+    envelope: {attack:0.018, decay: bassDecay, sustain:0.38, release:1.4},
+    volume: -9
+  }).connect(bFilt);
+
+  // Pad — volume entirely from glow; reverb size from waveH; chorus richness from glow
+  const pVerb   = new Tone.Reverb({decay: 4 + p.waveH * 10, wet: padWet}).connect(comp);
+  const pChorus = new Tone.Chorus(1 + p.glow * 2, 3, 0.45 + p.glow * 0.5).connect(pVerb);
+  const padOsc  = dna.padType==='dark' ? 'sawtooth' : dna.padType==='cold' ? 'triangle' : 'sine';
+  const pad     = new Tone.PolySynth(Tone.Synth, {
+    oscillator: {type: padOsc},
+    envelope: {attack: 1.2 + p.waveH * 3, decay:1.2, sustain:0.85, release: 3.5 + p.waveH * 4},
+    volume: padVol
+  }).connect(pChorus);
+
+  // Chord stabs — at low density: soft slow pads; at high density: hard punchy stabs every beat
+  const cDelay = new Tone.FeedbackDelay({
+    delayTime: p.density > 0.5 ? '8n.' : '4n',
+    feedback: 0.08 + p.density * 0.38,
+    wet: 0.1 + p.density * 0.32
+  }).connect(mVerb);
+  const chords = new Tone.PolySynth(Tone.Synth, {
+    oscillator: {type:'triangle'},
+    envelope: {attack: chordAttack, decay: chordDecay, sustain:0.28, release:1.3},
+    volume: -24 + p.density * 12   // -24 dB (whisper) → -12 dB (punchy)
+  }).connect(cDelay);
+
+  // Vocal shimmer — completely silent at glow=0, singing prominently at glow=1
+  const vVerb = new Tone.Reverb({decay: 3.5 + p.waveH * 7, wet: 0.72 + p.glow * 0.2}).connect(comp);
+  const vFilt = new Tone.Filter({
+    frequency: 350 + p.density * 1600,
+    type:'bandpass', Q: 2 + p.glow * 4
+  }).connect(vVerb);
+  const vib   = new Tone.Vibrato({frequency: 2.5 + p.glow * 4, depth: 0.03 + p.glow * 0.16}).connect(vFilt);
+  const vocal = new Tone.PolySynth(Tone.Synth, {
+    oscillator: {type:'sine'},
+    envelope: {attack: 0.4 + p.waveH * 0.7, decay:0.85, sustain:0.5, release: 2 + p.waveH * 2.5},
+    volume: vocalVol
+  }).connect(vib);
+
+  allNodes=[kick,snare,hat,bass,bFilt,pad,pVerb,pChorus,chords,cDelay,vocal,vib,vFilt,vVerb,mFilt,mVerb,comp];
+
+  // ── Patterns ──────────────────────────────────────────────────────────────
+  const pats = {
+    halfTime: [1,3,3,3, 3,3,2,3, 1,3,3,3, 2,3,3,3],
+    swing:    [1,3,3,2, 3,3,1,3, 2,3,3,3, 1,3,2,3],
+    trap:     [1,3,3,3, 2,3,3,3, 1,3,1,3, 2,3,3,3],
+  };
+  const pat = pats[dna.beatFeel] || pats.halfTime;
+
+  let bi=0;
+  const beatL = new Tone.Sequence(time => {
+    const h = pat[bi % pat.length];
+    if(h===1){ kick.triggerAttackRelease('C1','8n',time); beatPulse=1.0; }
+    if(h===2){ snare.triggerAttackRelease('8n',time); beatPulse=0.6; }
+    // Hats: density=0 → almost never; density=1 → every 16th note
+    if(h===3 && Math.random() < hatProb) hat.triggerAttackRelease(time,'32n');
+    // Ghost snares only unlock at higher density thresholds
+    if(p.density > 0.55 && bi%16===6)  snare.triggerAttackRelease('32n',time);
+    if(p.density > 0.78 && bi%16===13) snare.triggerAttackRelease('32n',time);
+    bi++;
+  }, pat.map((_,i)=>i), '16n');
+
+  let bci=0;
+  const bassL = new Tone.Sequence(time => {
+    const note = dna.bassNotes[bci % dna.bassNotes.length];
+    bass.triggerAttackRelease(note, '2n', time);
+    // Octave walk decorations unlock at high waveH
+    if(p.waveH > 0.58 && Math.random() < (p.waveH - 0.58) * 2.2){
+      const up = note.replace(/\d/, n => String(parseInt(n)+1));
+      bass.triggerAttackRelease(up, '8n', Tone.Time(time)+Tone.Time('4n.'));
+    }
+    bci++;
+  }, [0], '2n');
+
+  let pi=0;
+  const padL = new Tone.Sequence(time => {
+    pad.triggerAttackRelease(chordToNotes(dna.chords[pi%dna.chords.length], 3), '2m', time);
+    pi++;
+  }, [0], '2m');
+
+  // Chord stabs: at density=0 you almost never hear them; at density=1 every beat has a stab
+  let ci=0;
+  const chordL = new Tone.Sequence(time => {
+    if(Math.random() < chordProb)
+      chords.triggerAttackRelease(chordToNotes(dna.chords[ci%dna.chords.length], 4), '8n.', time);
+    ci++;
+  }, [0,1], '4n.');
+
+  // Vocal: 0.03 probability at glow=0 (essentially silent) → 0.53 at glow=1 (constant shimmer)
+  const vNotes = ['Eb4','Ab4','Bb4','Db5','Eb5','F5','Db5','Bb4'];
+  let vi=0;
+  const vocalL = new Tone.Sequence(time => {
+    if(Math.random() < 0.03 + p.glow * 0.5)
+      vocal.triggerAttackRelease([vNotes[Math.floor(Math.random()*vNotes.length)]], '4n.', time);
+    vi++;
+  }, [0,1,2,3,4,5,6,7], '2n');
+
+  allLoops=[beatL,bassL,padL,chordL,vocalL];
+  Tone.Transport.start();
+  beatL.start(0); bassL.start(0); padL.start('+0.1'); chordL.start('+0.2'); vocalL.start('+0.5');
+  musicPlaying=true;
+}
+
+// ── SESSION LOGGER ────────────────────────────────────────────────────────────
+function saveSession(dna){
+  // Only snapshot the active mode's params
+  const p=params;
+  const session={
+    time:new Date().toLocaleTimeString(),
+    vibe:dna.vibe,
+    key:dna.key,
+    bpm:Math.round(Tone.Transport.bpm.value||dna.bpm),
+    activeMode:mode,
+    params:{
+      waveH:+p.waveH.toFixed(2),
+      density:+p.density.toFixed(2),
+      spreadX:+p.spreadX.toFixed(2),
+      spreadY:+p.spreadY.toFixed(2),
+      glow:+p.glow.toFixed(2),
+      layer:p.layer
+    }
+  };
+  const sessions=JSON.parse(localStorage.getItem('lightSoulSessions')||'[]');
+  sessions.unshift(session);
+  sessions.splice(10);
+  localStorage.setItem('lightSoulSessions',JSON.stringify(sessions));
+}
+
+document.getElementById('commit-btn').addEventListener('click',async()=>{
+  const dna=getDNA();
+  document.getElementById('song-dna').textContent=`${dna.vibe} · ${dna.key} · ${Math.round(Tone.Transport.bpm.value||dna.bpm)}bpm`;
+  saveSession(dna);
+  await startMusic(dna);
+  document.getElementById('commit-btn').classList.add('playing');
+  document.getElementById('commit-btn').textContent='FEEL IT';
+  document.getElementById('stop-btn').classList.add('visible');
+  document.getElementById('status').textContent='playing';
+});
+document.getElementById('stop-btn').addEventListener('click',()=>{
+  stopMusic();document.getElementById('song-dna').textContent='sculpt the light — then commit';
+});
+
+// ── VISUALS ───────────────────────────────────────────────────────────────────
+// SAME dot-field both modes. Motion always driven by SHAPE params.
+// FEEL params only change: dot size, colour palette, connections, bloom, trail.
+const COLS=58,ROWS=30;
+let dots=[];
+
+function initDots(){
+  dots=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
+    dots.push({col:c,row:r,
+      baseX:(c/(COLS-1))*W*0.92+W*0.04,
+      baseY:(r/(ROWS-1))*H*0.46+H*0.1,
+      phase:Math.random()*Math.PI*2,
+      size:0.4+Math.random()*1.4,
+      flicker:Math.random()});
+}
+
+// Motion ALWAYS uses SHAPE params — so the wave doesn't change when you switch to FEEL
+function getWaveY(c,r,time){
+  const s=modeParams.shape;
+  const cx=c/(COLS-1),cr=r/(ROWS-1);
+  const amp=s.waveH*H*0.36;
+  const spd=0.05+s.spreadY*4.5;  // wider range: near-stop → very fast
+  const jx=(s.spreadX-0.5)*5.0;  // wider drift range
+  let y=Math.sin(cx*Math.PI*2.2+time*spd+jx)*amp;
+  y+=Math.sin(cx*Math.PI*3.5-time*spd*0.7+cr*1.5)*amp*0.35;
+  // Harmonics: density 0→1 = 0→10 layers, each clearly audible/visible
+  const harmonics=Math.round(s.density*10);
+  for(let m=0;m<harmonics;m++){
+    const freq=1.8+(m*1.8);
+    const a=amp*(0.38-m*0.02);  // stays larger for longer
+    y+=Math.sin(cx*Math.PI*freq+time*(spd*0.5+m*0.28)+cr*2+m*1.1)*a;
+  }
+  // Frequency: layer 0→5 = very slow simple wave → very fast complex wave
+  const freqMult=1+(s.layer*0.9);  // was 0.35 — now much more dramatic
+  y+=Math.sin(cx*Math.PI*2.2*freqMult+time*spd*(1+s.layer*0.4)+jx*1.5)*amp*(0.2+s.layer*0.08);
+  return y;
+}
+
+// Style ALWAYS uses FEEL params for colour/palette
+function getFeelColor(waveCrest,dotFlicker,time){
+  const f=modeParams.feel;
+  const sat=f.spreadX;
+  const pal=f.layer;
+
+  let rv,gv,bv;
+  if(pal===0){
+    // Pure white / silver — monochrome
+    const v=Math.floor(200+waveCrest*55);
+    rv=v;gv=v;bv=v;
+  } else if(pal===1){
+    // Cool blue (original feel)
+    const warmth=waveCrest*0.4*sat;
+    rv=Math.floor(185+warmth*70);gv=Math.floor(212+warmth*20);bv=255;
+  } else if(pal===2){
+    // Warm gold / amber
+    rv=Math.floor(230+waveCrest*25);
+    gv=Math.floor(170+waveCrest*60*sat);
+    bv=Math.floor(60+waveCrest*40*(1-sat));
+  } else if(pal===3){
+    // Rose / pink / coral
+    rv=255;
+    gv=Math.floor(100+waveCrest*80*sat);
+    bv=Math.floor(130+waveCrest*60*sat);
+  } else if(pal===4){
+    // Full rainbow spectrum — hue shifts with column position + time
+    const hue=(dotFlicker+waveCrest*0.5+t*0.04)%1;
+    const [r2,g2,b2]=hslToRgb(hue,0.55+sat*0.4,0.6+waveCrest*0.25);
+    rv=r2;gv=g2;bv=b2;
+  } else {
+    // Inverted / negative: dark dots on glowing background effect
+    const v=Math.floor(50+waveCrest*80);
+    rv=v;gv=v;bv=Math.floor(80+waveCrest*100);
+  }
+
+  // Desaturate toward white based on (1-sat)
+  if(pal!==4&&pal!==5){
+    const desat=1-sat;
+    const avg=(rv+gv+bv)/3;
+    rv=Math.round(rv*(1-desat)+avg*desat);
+    gv=Math.round(gv*(1-desat)+avg*desat);
+    bv=Math.round(bv*(1-desat)+avg*desat);
+  }
+  return[Math.min(255,rv),Math.min(255,gv),Math.min(255,bv)];
+}
+
+function hslToRgb(h,s,l){
+  let r,g,b;
+  if(s===0){r=g=b=l;}else{
+    const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+    const q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;
+    r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);
+  }
+  return[Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+}
+
+function resize(){
+  W=wrap.clientWidth||700;H=Math.round(W*0.6);
+  canvas.width=W;canvas.height=H;wrap.style.height=H+'px';initDots();
+}
+
+function draw(){
+  const time=t*0.011;
+  const s=modeParams.shape; // motion params (always)
+  const f=modeParams.feel;  // style params (always)
+
+  // Trail fade — inverted in light wall mode
+  const trailFade=mode==='shape'
+    ? 0.10+(1-s.glow)*0.12
+    : 0.04+(1-f.spreadY)*0.14;
+  if(lightWall){
+    ctx.fillStyle=`rgba(245,244,240,${trailFade})`;
+  } else {
+    ctx.fillStyle=`rgba(0,1,5,${trailFade})`;
+  }
+  ctx.fillRect(0,0,W,H);
+
+  // Ambient floor glow — palette-tinted in FEEL mode, inverted in light wall
+  const glowColors=['rgba(30,60,140,','rgba(30,60,140,','rgba(60,30,5,','rgba(60,10,20,','rgba(20,10,40,','rgba(10,20,50,'];
+  const glowColorsLight=['rgba(180,200,240,','rgba(180,200,240,','rgba(220,180,80,','rgba(230,160,160,','rgba(180,140,220,','rgba(160,180,220,'];
+  const gcArr=lightWall?glowColorsLight:glowColors;
+  const gc=mode==='feel'?(gcArr[f.layer]||gcArr[0]):gcArr[0];
+  const rfg=ctx.createRadialGradient(W*0.5,H*0.9,0,W*0.5,H*0.9,W*0.45);
+  rfg.addColorStop(0,gc+(0.04+s.glow*0.1)+')');
+  rfg.addColorStop(1,'transparent');
+  ctx.fillStyle=rfg;ctx.fillRect(0,0,W,H);
+
+  // Beat pulse
+  if(beatPulse>0.01){
+    const pg=ctx.createRadialGradient(W*0.5,H*0.45,0,W*0.5,H*0.45,W*0.55);
+    const pc=lightWall?`rgba(40,80,200,${beatPulse*0.06})`:`rgba(160,200,255,${beatPulse*0.07})`;
+    pg.addColorStop(0,pc);
+    pg.addColorStop(1,'transparent');
+    ctx.fillStyle=pg;ctx.fillRect(0,0,W,H);
+    beatPulse*=0.86;
+  }
+
+  const jxDrift=(s.spreadX-0.5)*W*0.08; // drift always from SHAPE
+
+  // Dot size: FEEL waveH controls thickness; SHAPE waveH drives wave amplitude only
+  const sizeMult=mode==='feel'?(0.4+(f.waveH-WAVE_MIN)/(WAVE_MAX-WAVE_MIN)*1.8):1.0;
+
+  // Bloom: FEEL glow = large soft bloom; SHAPE = tight standard halo
+  const bloomMult=mode==='feel'?(2+f.glow*7):3.2;
+  const bloomAlpha=mode==='feel'?(f.glow*0.18):0.06;
+
+  // Connections: SHAPE=subtle fixed, FEEL=density drives the grid density
+  const connMult=mode==='feel'?f.density:0.5;
+
+  for(let i=0;i<dots.length;i++){
+    const d=dots[i];
+    const wY=getWaveY(d.col,d.row,time);
+    const px=d.baseX+jxDrift+Math.sin(time*0.15+d.phase)*1.8;
+    const py=d.baseY+wY;
+    if(py<-10||py>H+10)continue;
+
+    const waveCrest=0.5+0.5*Math.sin(d.col/(COLS-1)*Math.PI*2.2+time*(0.2+s.spreadY*2.4));
+    const flicker=musicPlaying
+      ?0.55+0.45*Math.sin(time*(2.5+d.flicker*5)+d.phase)
+      :0.65+0.35*Math.sin(time*0.9+d.phase);
+    const brightness=(0.12+s.glow*0.65)*flicker;
+    const alpha=Math.min(1,brightness+waveCrest*0.45);
+
+    // SHAPE: cool blue-white (dark wall) or deep navy (light wall). FEEL: chosen palette.
+    let rv,gv,bv;
+    if(mode==='shape'){
+      if(lightWall){
+        // Dark inky dots on light background
+        rv=Math.floor(20+waveCrest*40);gv=Math.floor(30+waveCrest*50);bv=Math.floor(80+waveCrest*60);
+      } else {
+        const warmth=waveCrest*0.35;
+        rv=Math.floor(195+warmth*60);gv=Math.floor(215+warmth*20);bv=255;
+      }
+    } else {
+      if(lightWall){
+        // Invert feel colors to dark saturated versions
+        const [fr,fg,fb]=getFeelColor(waveCrest,d.flicker,time);
+        rv=Math.floor(fr*0.25);gv=Math.floor(fg*0.25);bv=Math.floor(fb*0.25);
+      } else {
+        [rv,gv,bv]=getFeelColor(waveCrest,d.flicker,time);
+      }
+    }
+
+    const sz=d.size*sizeMult*(0.5+waveCrest*0.85+s.glow*0.45);
+
+    ctx.beginPath();ctx.arc(px,py,sz,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${rv},${gv},${bv},${alpha})`;ctx.fill();
+
+    // Bloom halo — always rendered, size/intensity from glow
+    if(alpha>0.3&&sz>0.6){
+      ctx.beginPath();ctx.arc(px,py,sz*bloomMult,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${rv},${gv},${bv},${alpha*bloomAlpha})`;ctx.fill();
+    }
+
+    // Hanging threads
+    if(d.row===0){
+      ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,py);
+      ctx.strokeStyle=`rgba(${rv},${gv},${bv},${alpha*0.05})`;ctx.lineWidth=0.3;ctx.stroke();
+    }
+
+    // Horizontal connections — always driven by density
+    if(d.col<COLS-1){
+      const nd=dots[i+1];
+      const nwY=getWaveY(nd.col,nd.row,time);
+      const nx=nd.baseX+jxDrift;const ny=nd.baseY+nwY;
+      const la=alpha*0.1*connMult;
+      if(la>0.005){
+        ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);
+        ctx.strokeStyle=`rgba(${rv},${gv},${bv},${la})`;ctx.lineWidth=0.25;ctx.stroke();
+      }
+    }
+    // Vertical connections
+    if(d.row<ROWS-1){
+      const ni=i+COLS;if(ni<dots.length){
+        const nd=dots[ni];
+        const nwY=getWaveY(nd.col,nd.row,time);
+        const nx=nd.baseX+jxDrift;const ny=nd.baseY+nwY;
+        const la=alpha*0.04*connMult;
+        if(la>0.003){
+          ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);
+          ctx.strokeStyle=`rgba(${rv},${gv},${bv},${la})`;ctx.lineWidth=0.2;ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // Mode flash on switch
+  if(modeFlash>0){
+    ctx.fillStyle=`rgba(255,255,255,${modeFlash*0.04})`;
+    ctx.fillRect(0,0,W,H);modeFlash*=0.87;
+  }
+
+  t++;requestAnimationFrame(draw);
+}
+
+resize();
+window.addEventListener('resize',()=>resize());
+updateLabels();
+draw();
+
+// Restore on load if navigated from sessions.html with ?restore=1
+if(new URLSearchParams(window.location.search).get('restore')==='1'){
+  // Small delay so draw() has started and syncControlsToParams works
+  setTimeout(()=>{
+    applyRestore();
+    // Clean the URL without reloading
+    history.replaceState({},'',window.location.pathname);
+  }, 300);
+}
+
+// ── HARDWARE BRIDGE — KY-035 via ESP32 WebSocket ─────────────────────────────
+//
+// Expected JSON from ESP32 (sent every ~16ms / 60Hz):
+//   { "slider": 2048 }           ← raw ADC 0–4095
+//   { "slider": 2048, "raw": 2048 }
+//
+// The ESP32 Arduino sketch is available as a companion file.
+// Connection: ws://<ip>/ws   (port 80, standard WebSocket)
+//
+// Mapping: ADC 0–4095  →  waveH WAVE_MIN(0.35)–WAVE_MAX(1.0)
+// The KY-035 rests at ~2048 when the magnet is centered, and sweeps
+// toward 0 or 4095 as the magnet approaches from each pole.
+// We clamp and normalise the full 0–4095 range.
+
+(()=>{
+  let ws=null;
+  let hwActive=false;
+  // After a restore, hardware must move past this threshold before taking over
+  // This prevents stale hardware positions from immediately overwriting restored values
+  const HW_TAKEOVER_THRESH=0.04; // ~4% of range
+  let hwBaseline={sl:null,jx:null,jy:null,rot:null,zig:null,snap:null};
+  let hwTakenOver={sl:false,jx:false,jy:false,rot:false,zig:false,snap:false};
+  let signalTimer=null;
+  const btn=document.getElementById('hw-btn');
+  const ipInput=document.getElementById('hw-ip');
+  const statusEl=document.getElementById('hw-status');
+  const rawEl=document.getElementById('hw-raw');
+  const signalEl=document.getElementById('hw-signal');
+  const signalBars=signalEl.querySelectorAll('span');
+
+  // Restore last IP
+  const savedIp=localStorage.getItem('lightSoulHwIp');
+  if(savedIp) ipInput.value=savedIp;
+
+  function animateSignal(){
+    signalEl.classList.add('active');
+    signalBars.forEach(b=>{
+      b.style.height=Math.floor(3+Math.random()*9)+'px';
+      b.style.background='rgba(100,220,150,0.6)';
+    });
+    clearTimeout(signalTimer);
+    signalTimer=setTimeout(()=>{
+      signalBars.forEach(b=>b.style.background='rgba(255,160,80,0.4)');
+    },300);
+  }
+
+  // Apply raw ADC value (0-4095) → straight slider
+  function applySliderValue(raw){
+    const norm=Math.max(0,Math.min(1,raw/4095));
+    params.waveH=window._WAVE_MIN+(norm*(window._WAVE_MAX-window._WAVE_MIN));
+    window._refreshWaveSlider();
+    rawEl.textContent='SL:'+raw;
+    animateSignal();
+  }
+
+  // Expose wave range constants so applySliderValue can reach them
+  window._WAVE_MIN=WAVE_MIN;
+  window._WAVE_MAX=WAVE_MAX;
+
+  function connect(){
+    const ip=ipInput.value.trim();
+    if(!ip){ipInput.focus();return;}
+    if(ws){ws.close();}
+    localStorage.setItem('lightSoulHwIp',ip);
+    statusEl.textContent='connecting…';
+    btn.className='';
+    btn.textContent='CONNECT';
+
+    ws=new WebSocket(`ws://${ip}:81`);
+
+    ws.onopen=()=>{
+      hwActive=true;
+      btn.classList.add('connected');
+      btn.textContent='LIVE';
+      statusEl.textContent='connected · all hardware active (S3 AP mode)';
+      signalEl.classList.add('active');
+    };
+
+    ws.onmessage=e=>{
+      try{
+        const d=JSON.parse(e.data);
+
+        // Store calibrated center from ESP32 (sent every packet)
+        if(d.jxc!==undefined) window._hwJXC=d.jxc;
+        if(d.jyc!==undefined) window._hwJYC=d.jyc;
+        const jxc=window._hwJXC||1950;
+        const jyc=window._hwJYC||1950;
+
+        // Show debug overlay
+        const dbg=document.getElementById('hw-debug');
+        if(dbg) dbg.style.display='block';
+
+        // ── B10K straight slider ──────────────────────────────────────────
+        // Fixed range matching your hardware: 0 to 1900
+        const raw=d.sl??d.slider??d.ky035??d.value??null;
+        if(raw!==null){
+          const slRaw=Number(raw);
+          const norm=Math.max(0,Math.min(1,slRaw/1900));
+          if(hwBaseline.sl===null) hwBaseline.sl=norm;
+          if(!hwTakenOver.sl && Math.abs(norm-hwBaseline.sl)>HW_TAKEOVER_THRESH) hwTakenOver.sl=true;
+          if(hwTakenOver.sl){
+            params.waveH=window._WAVE_MIN+(norm*(window._WAVE_MAX-window._WAVE_MIN));
+            window._refreshWaveSlider();
+          }
+          const el=document.getElementById('dbg-sl');
+          if(el) el.textContent=slRaw+' → '+norm.toFixed(2)+(hwTakenOver.sl?'':' [locked]');
+          rawEl.textContent='SL:'+slRaw; animateSignal();
+        }
+
+        // ── KY-023 joystick ───────────────────────────────────────────────
+        // Fixed calibration from your hardware:
+        //   rest ~800, min ~0, max ~1800, deadzone 200 units from rest
+        // When in deadzone: HOLD last value. When active: map 0→0 / rest→0.5 / max→1
+        if(d.jx!==undefined && d.jy!==undefined){
+          const JX_REST=800, JY_REST=800;
+          const JX_MIN=0,   JX_MAX=1800;
+          const JY_MIN=0,   JY_MAX=1800;
+          const JDEAD=200;
+
+          const jxActive=Math.abs(d.jx-JX_REST)>JDEAD;
+          const jyActive=Math.abs(d.jy-JY_REST)>JDEAD;
+
+          const jxNorm=Math.max(0,Math.min(1,(d.jx-JX_MIN)/Math.max(1,JX_MAX-JX_MIN)));
+          const jyNormRaw=Math.max(0,Math.min(1,(d.jy-JY_MIN)/Math.max(1,JY_MAX-JY_MIN)));
+          if(hwBaseline.jx===null) hwBaseline.jx=jxNorm;
+          if(hwBaseline.jy===null) hwBaseline.jy=jyNormRaw;
+          if(!hwTakenOver.jx && jxActive && Math.abs(jxNorm-hwBaseline.jx)>HW_TAKEOVER_THRESH) hwTakenOver.jx=true;
+          if(!hwTakenOver.jy && jyActive && Math.abs(jyNormRaw-hwBaseline.jy)>HW_TAKEOVER_THRESH) hwTakenOver.jy=true;
+          if(jxActive && hwTakenOver.jx){
+            params.spreadX=jxNorm;
+          }
+          if(jyActive && hwTakenOver.jy){
+            params.spreadY=Math.max(0,Math.min(1,1-jyNormRaw));
+          }
+          if((jxActive&&hwTakenOver.jx)||(jyActive&&hwTakenOver.jy)) window._refreshJoystick();
+
+          const ex=document.getElementById('dbg-jx');
+          const ey=document.getElementById('dbg-jy');
+          if(ex) ex.textContent=d.jx+' '+(jxActive?'MOVE':'HOLD');
+          if(ey) ey.textContent=d.jy+' '+(jyActive?'MOVE':'HOLD');
+          rawEl.textContent='JX:'+d.jx+' JY:'+d.jy; animateSignal();
+        }
+
+        // ── KY-040 rotary ─────────────────────────────────────────────────
+        // Rotary is unbounded (counts up/down), clamp to 0-1023 in Arduino.
+        // Use full 0-1023 range for full glow sweep.
+        if(d.rot!==undefined){
+          const rotNorm=Math.max(0,Math.min(1,d.rot/1023));
+          if(hwBaseline.rot===null) hwBaseline.rot=rotNorm;
+          if(!hwTakenOver.rot && Math.abs(rotNorm-hwBaseline.rot)>HW_TAKEOVER_THRESH) hwTakenOver.rot=true;
+          if(hwTakenOver.rot){
+            params.glow=rotNorm;
+            window._setRotAngle(rotNorm);
+            window._redrawKnob();
+          }
+          const er=document.getElementById('dbg-rot');
+          if(er) er.textContent=d.rot+' → '+rotNorm.toFixed(2);
+          rawEl.textContent='ROT:'+d.rot; animateSignal();
+        }
+
+        // ── Reed switches: zigzag (1-8 → density steps) ───────────────────
+        if(d.zig!==undefined && d.zig>0){
+          const step=Math.max(1,Math.min(8,d.zig));
+          if(hwBaseline.zig===null) hwBaseline.zig=step;
+          if(!hwTakenOver.zig && step!==hwBaseline.zig) hwTakenOver.zig=true;
+          if(hwTakenOver.zig){
+            params.density=step/8;
+            window._refreshZigzag();
+          }
+          const ez=document.getElementById('dbg-zig');
+          if(ez) ez.textContent=step;
+          rawEl.textContent='ZIG:'+step; animateSignal();
+        }
+
+        // ── Reed switches: magnet snaps (0-5 → layer) ────────────────────
+        if(d.snap!==undefined && d.snap>=0 && d.snap<=5){
+          if(hwBaseline.snap===null) hwBaseline.snap=d.snap;
+          if(!hwTakenOver.snap && d.snap!==hwBaseline.snap) hwTakenOver.snap=true;
+          if(hwTakenOver.snap){
+            params.layer=d.snap;
+            window._refreshMagnets();
+          }
+          const es=document.getElementById('dbg-snap');
+          if(es) es.textContent=d.snap;
+          rawEl.textContent='SNAP:'+d.snap; animateSignal();
+        }
+
+        // ── Mode buttons ──────────────────────────────────────────────────
+        if(d.btn==='shape'){
+          mode='shape'; params=modeParams.shape;
+          document.getElementById('m1').classList.add('active');
+          document.getElementById('m2').classList.remove('active');
+          modeFlash=0.6; updateLabels(); syncControlsToParams();
+          rawEl.textContent='BTN: SHAPE'; animateSignal();
+        }
+        if(d.btn==='feel'){
+          mode='feel'; params=modeParams.feel;
+          document.getElementById('m2').classList.add('active');
+          document.getElementById('m1').classList.remove('active');
+          modeFlash=0.6; updateLabels(); syncControlsToParams();
+          rawEl.textContent='BTN: FEEL'; animateSignal();
+        }
+
+        // ── Music button ──────────────────────────────────────────────────
+        if(d.btn==='music'){
+          if(d.action==='play'){
+            const dna=getDNA();
+            startMusic(dna).then(()=>{
+              saveSession(dna);
+              document.getElementById('song-dna').textContent=
+                `${dna.vibe} · ${dna.key} · ${Math.round(Tone.Transport.bpm.value||dna.bpm)}bpm`;
+              document.getElementById('commit-btn').classList.add('playing');
+              document.getElementById('commit-btn').textContent='FEEL IT';
+              document.getElementById('stop-btn').classList.add('visible');
+              document.getElementById('status').textContent='playing';
+            });
+          } else {
+            stopMusic();
+            document.getElementById('song-dna').textContent='sculpt the light — then commit';
+          }
+          rawEl.textContent='BTN: MUSIC '+d.action; animateSignal();
+        }
+
+        // ── Joystick SW — re-center ───────────────────────────────────────
+        if(d.btn==='joycenter'){
+          // Reset joystick params to center
+          params.spreadX=0.5;
+          params.spreadY=0.5;
+          window._refreshJoystick();
+          rawEl.textContent='BTN: JOY CENTER'; animateSignal();
+        }
+
+        // ── Mode sync on connect (ESP32 sends current state) ──────────────
+        if(d.mode!==undefined){
+          const m=d.mode===1?'feel':'shape';
+          if(m!==mode){
+            mode=m; params=modeParams[mode];
+            document.getElementById('m1').classList.toggle('active',mode==='shape');
+            document.getElementById('m2').classList.toggle('active',mode==='feel');
+            updateLabels(); syncControlsToParams();
+          }
+        }
+
+      } catch(_){
+        const n=parseFloat(e.data);
+        if(!isNaN(n)) applySliderValue(n);
+      }
+    };
+
+    ws.onerror=()=>{
+      btn.classList.add('error');
+      btn.textContent='ERROR';
+      statusEl.textContent='connection failed · check IP & firmware';
+      signalEl.classList.remove('active');
+      rawEl.textContent='';
+    };
+
+    ws.onclose=()=>{
+      hwActive=false;
+      if(btn.classList.contains('connected')){
+        btn.className='';
+        btn.textContent='CONNECT';
+        statusEl.textContent='disconnected · software mode';
+      }
+      signalEl.classList.remove('active');
+    };
+  }
+
+  btn.addEventListener('click',()=>{
+    if(ws&&ws.readyState===WebSocket.OPEN){
+      ws.close();
+      btn.className='';btn.textContent='CONNECT';
+      statusEl.textContent='disconnected · software mode';
+      signalEl.classList.remove('active');rawEl.textContent='';
+    } else {
+      connect();
+    }
+  });
+  ipInput.addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
+})();
+
+// ── SESSION LOG OVERLAY ──────────────────────────────────────────────────────
+const SONG_NAMES=['midnight velvet','saturn in retrograde','golden wound','loose thread','dusk on repeat','soft frequency'];
+let logPlayingIndex=-1; // which session is currently playing in the log
+
+function openSessionLog(){
+  renderSessionLog();
+  document.getElementById('log-overlay').style.display='block';
+}
+
+function closeSessionLog(){
+  document.getElementById('log-overlay').style.display='none';
+}
+
+function clearSessions(){
+  localStorage.removeItem('lightSoulSessions');
+  renderSessionLog();
+}
+
+function makeParamSection(sectionLabel, data, labelMap, isLatest){
+  const col=isLatest?'0.65':'0.38';
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;gap:3px;';
+  const secLabel=document.createElement('div');
+  secLabel.style.cssText='font-size:9px;letter-spacing:0.14em;color:rgba(140,190,255,0.22);margin-bottom:2px;margin-top:6px;';
+  secLabel.textContent=sectionLabel;
+  wrap.appendChild(secLabel);
+  Object.entries(labelMap).forEach(([k,label])=>{
+    const val=data?data[k]??0:0;
+    const r=document.createElement('div');
+    r.style.cssText='display:flex;align-items:center;gap:8px;';
+    r.innerHTML=`<span style="font-size:9px;color:rgba(140,190,255,0.25);width:72px;flex-shrink:0;letter-spacing:0.07em;">${label}</span>`
+      +`<div style="flex:1;height:2px;background:rgba(140,190,255,0.07);border-radius:1px;"><div style="width:${(val*100).toFixed(0)}%;height:100%;background:rgba(140,190,255,${col});border-radius:1px;"></div></div>`
+      +`<span style="font-size:9px;color:rgba(140,190,255,0.28);width:28px;text-align:right;">${val.toFixed(2)}</span>`;
+    wrap.appendChild(r);
+  });
+  return wrap;
+}
+
+function renderSessionLog(){
+  const sessions=JSON.parse(localStorage.getItem('lightSoulSessions')||'[]');
+  const list=document.getElementById('log-list');
+  const empty=document.getElementById('log-empty');
+  const clearBtn=document.getElementById('log-clear-btn');
+  list.innerHTML='';
+
+  if(!sessions.length){
+    empty.style.display='block';
+    clearBtn.style.display='none';
+    return;
+  }
+  empty.style.display='none';
+  clearBtn.style.display='block';
+
+  const SHAPE_LABELS={waveH:'WAVE HEIGHT',density:'HARMONICS',spreadX:'SPREAD X',spreadY:'SPEED',glow:'BRIGHTNESS'};
+  const FEEL_LABELS ={waveH:'DOT SIZE',density:'CONNECTIONS',spreadX:'SATURATION',spreadY:'TRAIL',glow:'BLOOM'};
+
+  sessions.forEach((s,i)=>{
+    // Support both new format (s.params + s.activeMode) and old formats
+    const p=s.params||(s.activeMode==='feel'?s.feel:s.shape)||s;
+    const isLatest=i===0;
+    const isPlaying=logPlayingIndex===i;
+    const modeLabel=s.activeMode==='feel'?'FEEL':'SHAPE';
+    const paramLabels=s.activeMode==='feel'?FEEL_LABELS:SHAPE_LABELS;
+
+    const card=document.createElement('div');
+    card.id='log-card-'+i;
+    card.style.cssText=`border:1px solid rgba(140,190,255,${isLatest?'0.25':'0.08'});border-radius:4px;padding:16px 18px;background:rgba(140,190,255,${isLatest?'0.03':'0.01'});display:flex;gap:16px;align-items:flex-start;`;
+
+    // Left: info + params
+    const info=document.createElement('div');
+    info.style.cssText='display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;';
+
+    // Title row
+    const titleRow=document.createElement('div');
+    titleRow.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+    titleRow.innerHTML=`<span style="font-size:12px;color:rgba(200,225,255,0.85);letter-spacing:0.06em;">${s.vibe}</span>`
+      +`<span style="font-size:9px;color:rgba(140,190,255,0.4);border:1px solid rgba(140,190,255,0.15);border-radius:2px;padding:1px 5px;letter-spacing:0.1em;">${modeLabel}</span>`
+      +(isLatest?'<span style="font-size:9px;color:rgba(140,190,255,0.45);border:1px solid rgba(140,190,255,0.2);border-radius:2px;padding:1px 5px;letter-spacing:0.1em;">LATEST</span>':'')
+      +(isPlaying?'<span style="font-size:9px;color:rgba(100,220,150,0.7);border:1px solid rgba(100,220,150,0.3);border-radius:2px;padding:1px 5px;letter-spacing:0.1em;">PLAYING</span>':'');
+
+    // Meta row
+    const meta=document.createElement('div');
+    meta.style.cssText='font-size:10px;color:rgba(140,190,255,0.35);letter-spacing:0.07em;';
+    meta.textContent=`${s.key} · ${s.bpm} bpm · ${SONG_NAMES[p.layer]||''} · ${s.time}`;
+
+    info.appendChild(titleRow);
+    info.appendChild(meta);
+    info.appendChild(makeParamSection(modeLabel+' PARAMS', p, paramLabels, isLatest));
+
+    // Right: actions
+    const actions=document.createElement('div');
+    actions.style.cssText='display:flex;flex-direction:column;gap:6px;flex-shrink:0;padding-top:2px;';
+
+    // ▶ PLAY — plays music from this session's saved params, visuals untouched
+    const playBtn=document.createElement('button');
+    playBtn.textContent=isPlaying?'STOP':'PLAY';
+    playBtn.style.cssText=`padding:5px 12px;border:1px solid rgba(${isPlaying?'100,220,150':'140,190,255'},${isPlaying?'0.45':'0.2'});background:transparent;color:rgba(${isPlaying?'120,230,160':'140,190,255'},${isPlaying?'0.8':'0.45'});font-size:10px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;font-family:monospace;white-space:nowrap;`;
+    playBtn.onclick=async()=>{
+      if(logPlayingIndex===i){
+        stopMusic();
+        logPlayingIndex=-1;
+        document.getElementById('song-dna').textContent='sculpt the light — then commit';
+      } else {
+        const dna=songLibrary[p.layer % songLibrary.length];
+        await startMusic(dna, p); // pass saved params — visuals never touched
+        logPlayingIndex=i;
+        document.getElementById('song-dna').textContent=`log: ${s.vibe} · ${s.key} · ${s.bpm}bpm`;
+        document.getElementById('commit-btn').classList.remove('playing');
+        document.getElementById('commit-btn').textContent='FEEL IT';
+        document.getElementById('stop-btn').classList.remove('visible');
+      }
+      renderSessionLog();
+    };
+
+    // ↗ RESTORE MUSIC — commits this session's music as the new live music
+    const restBtn=document.createElement('button');
+    restBtn.textContent='MUSIC';
+    restBtn.style.cssText='padding:5px 12px;border:1px solid rgba(140,190,255,0.15);background:transparent;color:rgba(140,190,255,0.38);font-size:10px;letter-spacing:0.1em;border-radius:3px;cursor:pointer;font-family:monospace;white-space:nowrap;';
+    restBtn.onclick=async()=>{
+      const dna=songLibrary[p.layer % songLibrary.length];
+      await startMusic(dna, p);
+      logPlayingIndex=-1;
+      document.getElementById('song-dna').textContent=`${s.vibe} · ${s.key} · ${s.bpm}bpm`;
+      document.getElementById('commit-btn').classList.add('playing');
+      document.getElementById('commit-btn').textContent='FEEL IT';
+      document.getElementById('stop-btn').classList.add('visible');
+      document.getElementById('status').textContent='playing';
+      closeSessionLog();
+    };
+
+    // ✕ DELETE
+    const delBtn=document.createElement('button');
+    delBtn.textContent='✕';
+    delBtn.style.cssText='padding:4px 10px;border:1px solid rgba(255,80,80,0.12);background:transparent;color:rgba(255,100,100,0.28);font-size:10px;border-radius:3px;cursor:pointer;font-family:monospace;';
+    delBtn.onclick=()=>{
+      if(logPlayingIndex===i){stopMusic();logPlayingIndex=-1;}
+      else if(logPlayingIndex>i) logPlayingIndex--;
+      const all=JSON.parse(localStorage.getItem('lightSoulSessions')||'[]');
+      all.splice(i,1);
+      localStorage.setItem('lightSoulSessions',JSON.stringify(all));
+      renderSessionLog();
+    };
+
+    actions.appendChild(playBtn);
+    actions.appendChild(restBtn);
+    actions.appendChild(delBtn);
+    card.appendChild(info);
+    card.appendChild(actions);
+    list.appendChild(card);
+  });
+}
+
+// ── SESSION RESTORE (triggered from sessions.html) ───────────────────────────
+// Uses both storage event AND polling — storage event alone is unreliable
+// on file:// protocol since browsers don't always fire it across tabs.
+function applyRestore(){
+  const raw=localStorage.getItem('lightSoulRestore');
+  if(!raw)return;
+  try{
+    const s=JSON.parse(raw);
+    const shapeData=s.shape||s;
+    const feelData=s.feel||null;
+    modeParams.shape.waveH   = shapeData.waveH;
+    modeParams.shape.density = shapeData.density;
+    modeParams.shape.spreadX = shapeData.spreadX;
+    modeParams.shape.spreadY = shapeData.spreadY;
+    modeParams.shape.glow    = shapeData.glow;
+    modeParams.shape.layer   = shapeData.layer;
+    if(feelData){
+      modeParams.feel.waveH   = feelData.waveH;
+      modeParams.feel.density = feelData.density;
+      modeParams.feel.spreadX = feelData.spreadX;
+      modeParams.feel.spreadY = feelData.spreadY;
+      modeParams.feel.glow    = feelData.glow;
+      modeParams.feel.layer   = feelData.layer;
+    }
+    syncControlsToParams();
+    modeFlash=1.2;
+    document.getElementById('song-dna').textContent=`restored: ${s.vibe} · ${s.key} · ${s.bpm}bpm`;
+    localStorage.removeItem('lightSoulRestore');
+    // Reset hw takeover — hardware must move before overwriting restored values
+    hwBaseline={sl:null,jx:null,jy:null,rot:null,zig:null,snap:null};
+    hwTakenOver={sl:false,jx:false,jy:false,rot:false,zig:false,snap:false};
+  }catch(e){console.error('restore failed',e);}
+}
+// Expose globally so sessions.html can call it directly via window.opener
+window.applyRestore = applyRestore;
+// Also catch via storage event and poll as fallbacks
+window.addEventListener('storage',e=>{if(e.key==='lightSoulRestore')applyRestore();});
+setInterval(applyRestore, 500);
+</script>
